@@ -1,0 +1,12 @@
+# Python related files
+build/
+eggs/
+env/
+*.pyc
+*.pyo
+# Scala
+*.class
+# Libraries
+*.so
+# Test data
+input-data/

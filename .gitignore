@@ -10,3 +10,4 @@ env/
 *.so
 # Test data
 input-data/
+archive/

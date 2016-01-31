@@ -11,7 +11,7 @@ for filename in sys.argv[1:]:
                 if "entities" in tweet and "symbols" in tweet["entities"]: 
                     for entry in tweet['entities']['symbols']:     
                         if "text" in entry:
-                            print line
+                            print entry["text"]
 
             except Exception as error:
                 sys.stdout.write("Error trying to process the line\n")

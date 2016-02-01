@@ -9,5 +9,9 @@ env/
 # Libraries
 *.so
 # Test data
-input-data/
+*.txt
+*.csv
+*.json
+*.bz2
+*.bzip2
 archive/

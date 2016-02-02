@@ -7,8 +7,7 @@ use tweet_keyspace;
 
 CREATE TABLE stocks (
     ticker text,
-  --time timestamp,
-    time text,
+    time timestamp,
     type text,
     price float,
     volume int,

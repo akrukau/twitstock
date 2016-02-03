@@ -8,6 +8,8 @@ env/
 *.class
 # Libraries
 *.so
+# Log files
+screenlog.*
 # Test data
 *.txt
 *.csv

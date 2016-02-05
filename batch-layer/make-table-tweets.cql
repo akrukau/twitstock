@@ -1,8 +1,8 @@
 --
 -- Tweet table data
 --
-
--- CREATE KEYSPACE tweet_keyspace WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};
+-- DROP KEYSPACE IF EXISTS tweet_keyspace;
+CREATE KEYSPACE tweet_keyspace WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};
 use tweet_keyspace;
 
 CREATE TABLE tweets (
@@ -10,7 +10,7 @@ CREATE TABLE tweets (
     time   timestamp,
     author text,
     n_followers int,
-    tweet  text,
+    n_tweets int,
     PRIMARY KEY (ticker, time) 
 ) WITH CLUSTERING ORDER BY (time ASC);
 

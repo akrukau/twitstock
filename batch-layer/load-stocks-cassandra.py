@@ -8,10 +8,10 @@ from datetime import datetime
 configuration = SparkConf().setAppName("StocksData")
 spark_context = SparkContext(conf=configuration)
 from pyspark.sql import SQLContext
-
 sqlContext = SQLContext(spark_context)
-#path = "../input-data/sample-stocks.json"
-path = "../input-data/minute-stocks.json"
+
+# Full data
+ath = "../input-data/04-april-2013-stocks.json"
 df = sqlContext.jsonFile(path)
 
 # Write to Cassandra

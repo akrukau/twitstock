@@ -79,8 +79,10 @@ def load_part_cassandra(part):
 # Read and parse tweets
 configuration = SparkConf().setAppName("TweetsData")
 spark_context = SparkContext(conf = configuration)
-#path = "../input-data/may-2015-stock-tweets.json"
-path = "../input-data/saved.bz2"
+path = "../input-data/one-day-stock-tweets.json"
+
+# For HDFS, use name node DNS name.
+#path = "hdfs://ec2-52-34-147-146.us-west-2.compute.amazonaws.com:9000/tweets/full-tweets-2015.bz2"
 tweets_rdd = spark_context.textFile(path)
 
 # Show debug information

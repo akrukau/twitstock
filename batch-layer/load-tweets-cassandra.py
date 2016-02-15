@@ -1,6 +1,7 @@
 from pyspark import SparkContext
 from pyspark import SparkConf
 from pyspark import StorageLevel
+import datetime
 import json
 import time
 import sys
@@ -13,10 +14,22 @@ import re
 def get_cassandra_time(ts_string):
     """
     Converts from Twitter API time format to Cassandra format  
+    Epoch seconds are rounded towards the nearest 5 minute interval.
+    The reason is that available stock data is in 5 minute interval. 
     """
-    return time.strftime('%Y-%m-%d %H:%M:%S', (time.strptime(ts_string,'%a %b %d %H:%M:%S +0000 %Y')) )
+    #  Rounding interval, in minutes
+    round_interval = 5
+    raw_time = datetime.datetime.strptime(ts_string,'%a %b %d %H:%M:%S +0000 %Y')
+    final_time = raw_time - datetime.timedelta(minutes=raw_time.minute % round_interval, \
+        seconds=raw_time.second, microseconds=raw_time.microsecond)
+    print "Timestamp", ts_string,"Raw time", datetime.datetime.strftime(raw_time, '%Y-%m-%d %H:%M:%S'), \
+        "actual time", datetime.datetime.strftime(final_time, '%Y-%m-%d %H:%M:%S') 
+    return datetime.datetime.strftime(final_time, '%Y-%m-%d %H:%M:%S')
 
 def init_tickers():
+    """
+    Load tickers into a dictionary
+    """
     tickers_file = open("../input-data/list-tickers.txt","r") 
     tickers = {}
     for line in tickers_file:
@@ -30,9 +43,11 @@ def parse_tweet(line, tickers):
 
         if "text" in tweet and "created_at" in tweet and "user" in tweet:
             matches = re.findall( r"\$[A-Z]{1,4}", tweet["text"])
-            for match in matches:
-                ticker = match[1:]
-                if ticker in tickers:
+            if True:
+            #for match in matches:
+                #ticker = match[1:]
+                if True:
+                #if ticker in tickers:
                     if "screen_name" in tweet["user"]:
                         author = tweet["user"]["screen_name"]
                     else:
@@ -42,11 +57,11 @@ def parse_tweet(line, tickers):
                     else:    
                         n_followers_count = "0"
 
-                    cassandra_time = get_cassandra_time(tweet["created_at"])
+                    cassandra_time = get_cassandra_time(str(tweet["created_at"]))
                     records.append( (ticker, cassandra_time, author, n_followers, tweet["text"]) )
     
     except Exception as error:
-        sys.stdout.write("Error trying to process the line\n")
+        sys.stdout.write("Error trying to process the line: %s\n" % error)
         pass
 
     return records           
@@ -68,7 +83,7 @@ def load_part_cassandra(part):
         session = cluster.connect('tweet_keyspace')
 
         for entry in part:
-            statement = "INSERT INTO tweets (ticker, time, n_tweets)"+ \
+            statement = "INSERT INTO tweets16 (ticker, time, n_tweets)"+ \
                 "VALUES ('%s', '%s', %s)" % (entry[0][0], entry[0][1], entry[1])
             print "Statement", statement    
             session.execute(statement)
@@ -79,7 +94,7 @@ def load_part_cassandra(part):
 # Read and parse tweets
 configuration = SparkConf().setAppName("TweetsData")
 spark_context = SparkContext(conf = configuration)
-path = "../input-data/one-day-stock-tweets.json"
+path = "../input-data/timo-data/small-tweets-2016.txt"
 
 # For HDFS, use name node DNS name.
 #path = "hdfs://ec2-52-34-147-146.us-west-2.compute.amazonaws.com:9000/tweets/full-tweets-2015.bz2"
@@ -90,8 +105,10 @@ tweets_rdd = spark_context.textFile(path)
 #    print "Raw tweet is:",entry
 tickers = init_tickers()
 parsed_tweets = tweets_rdd.flatMap(lambda line: parse_tweet(line, tickers))
-
+# Print for debugging
+for tweet in parsed_tweets.collect():
+    print "Parsed tweet", tweet
 # Load to Cassandra
-df_by_minute = parsed_tweets.map(get_minute).reduceByKey(lambda a, b: (a + b))
-df_by_minute.foreachPartition(load_part_cassandra)
+#df_by_minute = parsed_tweets.reduceByKey(lambda a, b: (a + b))
+#df_by_minute.foreachPartition(load_part_cassandra)
 

@@ -121,7 +121,7 @@ def load_part_cassandra(part):
         for entry in part:
             statement = "INSERT INTO tweets16 (ticker, time, n_tweets, sentiment)"+ \
                 "VALUES ('%s', '%s', %s, %s)" % (entry[0][0], entry[0][1], entry[1][0], entry[1][1])
-            print "Statement", statement    
+            #print "Statement", statement    
             session.execute(statement)
         
         session.shutdown()

@@ -11,7 +11,7 @@ from pyspark.sql import SQLContext
 sqlContext = SQLContext(spark_context)
 
 # Full data
-path = "../input-data/04-april-2013-stocks.json"
+ath = "../input-data/04-april-2013-stocks.json"
 df = sqlContext.jsonFile(path)
 
 # Write to Cassandra

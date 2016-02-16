@@ -8,7 +8,7 @@ import sys
 import re
 
 #
-#   Loads only Tweet count by minute to Cassandra 
+#   Loads tweet data to Cassandra 
 #
 
 def get_cassandra_time(ts_string):
@@ -36,18 +36,56 @@ def init_tickers():
         tickers[line.rstrip()] = 1
     return tickers
 
-def parse_tweet(line, tickers):
+def init_positive_words():
+    pos_words_file = open("./textual-analysis/positive-words.txt","r") 
+    pos_words = {}
+    for line in pos_words_file:
+        tokens = line.split()
+        pos_words[line.split()[0]] = 1
+    return pos_words    
+
+def init_negative_words():
+    neg_words_file = open("./textual-analysis/negative-words.txt","r") 
+    neg_words = {}
+    for line in neg_words_file:
+        tokens = line.split()
+        neg_words[line.split()[0]] = 1
+    return neg_words
+    
+def get_sentiment(tweet_text, pos_words, neg_words):
+    # Convert to ascii and lower case
+    cleaned_text = re.sub("[\.\,\:\(\)\!\?]", "", tweet_text, 0, 0)
+    words = cleaned_text.split()
+    # Count of positive words
+    pos_count = 0
+    # Count of negative words
+    neg_count = 0
+    size = len(words)
+    for i in xrange(size):
+        word = words[i]
+        if word in pos_words:
+            pos_count += 1
+        if word in neg_words: 
+            neg_count += 1
+    if pos_count + neg_count == 0:
+        # Return 0, if no relevant words are found
+        return  0.0
+    else:    
+        return -1.0 + 2.0 * pos_count / (pos_count + neg_count)
+
+
+def parse_tweet(line, tickers, pos_words, neg_words):
     records = []
     try: 
         tweet = json.loads(line)
 
         if "text" in tweet and "created_at" in tweet and "user" in tweet:
             matches = re.findall( r"\$[A-Z]{1,4}", tweet["text"])
-            if True:
-            #for match in matches:
-                #ticker = match[1:]
-                if True:
-                #if ticker in tickers:
+            #if True:
+            for match in matches:
+                ticker = match[1:]
+                #if True:
+                if ticker in tickers:
                     if "screen_name" in tweet["user"]:
                         author = tweet["user"]["screen_name"]
                     else:
@@ -58,19 +96,17 @@ def parse_tweet(line, tickers):
                         n_followers_count = "0"
 
                     cassandra_time = get_cassandra_time(str(tweet["created_at"]))
-                    records.append( (ticker, cassandra_time, author, n_followers, tweet["text"]) )
+                    # Convert to ASCII, and calculate sentiment
+                    ascii_text = tweet["text"].encode('ascii','ignore').lower()
+                    sentiment = get_sentiment(ascii_text, pos_words, neg_words)
+                    records.append( ((ticker, cassandra_time), \
+                        (1, sentiment)) )
     
     except Exception as error:
         sys.stdout.write("Error trying to process the line: %s\n" % error)
         pass
 
     return records           
-
-
-
-def get_minute(tweet):
-    """ Rounds to the nearest minute """
-    return ( (tweet[0], tweet[1][:16] + ':00'), 1)    
 
 # Write to Cassandra
 def load_part_cassandra(part):
@@ -83,32 +119,38 @@ def load_part_cassandra(part):
         session = cluster.connect('tweet_keyspace')
 
         for entry in part:
-            statement = "INSERT INTO tweets16 (ticker, time, n_tweets)"+ \
-                "VALUES ('%s', '%s', %s)" % (entry[0][0], entry[0][1], entry[1])
+            statement = "INSERT INTO tweets16 (ticker, time, n_tweets, sentiment)"+ \
+                "VALUES ('%s', '%s', %s, %s)" % (entry[0][0], entry[0][1], entry[1][0], entry[1][1])
             print "Statement", statement    
             session.execute(statement)
         
         session.shutdown()
         cluster.shutdown()
 
+pos_words = init_positive_words()
+neg_words = init_negative_words()
 # Read and parse tweets
 configuration = SparkConf().setAppName("TweetsData")
 spark_context = SparkContext(conf = configuration)
-path = "../input-data/timo-data/small-tweets-2016.txt"
-
 # For HDFS, use name node DNS name.
 #path = "hdfs://ec2-52-34-147-146.us-west-2.compute.amazonaws.com:9000/tweets/full-tweets-2015.bz2"
+#path = "../input-data/timo-data/small-tweets-2016.txt"
+#path = "./one-day-stock-tweets.json"
+path = "../input-data/2016-02-08-11-57-tweets.txt"
+
 tweets_rdd = spark_context.textFile(path)
 
 # Show debug information
-#for entry in tweets_rdd.collect():
+# for entry in tweets_rdd.collect():
 #    print "Raw tweet is:",entry
 tickers = init_tickers()
-parsed_tweets = tweets_rdd.flatMap(lambda line: parse_tweet(line, tickers))
+parsed_tweets = tweets_rdd.flatMap(lambda line: parse_tweet(line, tickers, pos_words, neg_words))
+
 # Print for debugging
-for tweet in parsed_tweets.collect():
-    print "Parsed tweet", tweet
+# for tweet in parsed_tweets.collect():
+#    print "Parsed tweet", tweet
+
 # Load to Cassandra
-#df_by_minute = parsed_tweets.reduceByKey(lambda a, b: (a + b))
-#df_by_minute.foreachPartition(load_part_cassandra)
+df_by_minute = parsed_tweets.reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))
+df_by_minute.foreachPartition(load_part_cassandra)
 

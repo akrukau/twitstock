@@ -17,7 +17,12 @@ nohup.out
 *.json
 *.bz2
 *.bzip2
+*.gz
+*.tar
+*.zip
+Loughran*
 archive/
+batch-layer/textual-analysis
 input-data/stooq
 input-data/netfonds
 input-data/timo-data

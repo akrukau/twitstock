@@ -14,7 +14,7 @@ import re
 def get_cassandra_time(ts_string):
     """
     Converts from Twitter API time format to Cassandra format  
-    Timestamps are rounded towards the nearest 5 minute interval.
+    Epoch seconds are rounded towards the nearest 5 minute interval.
     The reason is that available stock data is in 5 minute interval. 
     """
     #  Rounding interval, in minutes
@@ -133,6 +133,7 @@ neg_words = init_negative_words()
 configuration = SparkConf().setAppName("TweetsData")
 spark_context = SparkContext(conf = configuration)
 # For HDFS, use name node DNS name.
+#path = "hdfs://ec2-52-34-147-146.us-west-2.compute.amazonaws.com:9000/tweets/full-tweets-2015.bz2"
 #path = "../input-data/timo-data/small-tweets-2016.txt"
 #path = "./one-day-stock-tweets.json"
 path = "../input-data/2016-02-08-11-57-tweets.txt"

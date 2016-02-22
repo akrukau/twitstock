@@ -26,13 +26,14 @@ def load_part_cassandra(part):
 
 def get_timestamp(date_string, time_string):
     raw_time = datetime.datetime.strptime(date_string + " " + time_string, "%Y-%m-%d %H:%M:%S")
+    # Use Polish timezone as the data is from Polish website
     localtimezone = pytz.timezone('Europe/Warsaw')
     local_time = localtimezone.localize(raw_time, is_dst=None)
     utc_time = local_time.astimezone(pytz.utc)
     return datetime.datetime.strftime(utc_time, '%Y-%m-%d %H:%M:%S')
 
 def parse_stocks(line):
-    fields = line.split()
+    fields = line.split(',')
     timestamp = get_timestamp(fields[1], fields[2])
     # fields[3] - open price 
     # fields[7] - volume of trading
@@ -42,12 +43,10 @@ def parse_stocks(line):
 # Read stock quotes
 configuration = SparkConf().setAppName("StocksData")
 spark_context = SparkContext(conf=configuration)
-from pyspark.sql import SQLContext
-sqlContext = SQLContext(spark_context)
 
 # Full data
-path = "./sample-stocks-2016.json"
-df = sqlContext.textFile(path)
+path = "./sample-stocks-2016.csv"
+df = spark_context.textFile(path)
 parsed_stocks = df.map(parse_stocks)
 
 #df_by_minute = df.map(get_by_minute).reduceByKey( \

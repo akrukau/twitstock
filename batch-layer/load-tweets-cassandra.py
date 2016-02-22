@@ -22,8 +22,8 @@ def get_cassandra_time(ts_string):
     raw_time = datetime.datetime.strptime(ts_string,'%a %b %d %H:%M:%S +0000 %Y')
     final_time = raw_time - datetime.timedelta(minutes=raw_time.minute % round_interval, \
         seconds=raw_time.second, microseconds=raw_time.microsecond)
-    print "Timestamp", ts_string,"Raw time", datetime.datetime.strftime(raw_time, '%Y-%m-%d %H:%M:%S'), \
-        "actual time", datetime.datetime.strftime(final_time, '%Y-%m-%d %H:%M:%S') 
+    #print "Timestamp", ts_string,"Raw time", datetime.datetime.strftime(raw_time, '%Y-%m-%d %H:%M:%S'), \
+    #    "actual time", datetime.datetime.strftime(final_time, '%Y-%m-%d %H:%M:%S') 
     return datetime.datetime.strftime(final_time, '%Y-%m-%d %H:%M:%S')
 
 def init_tickers():
@@ -135,8 +135,8 @@ spark_context = SparkContext(conf = configuration)
 # For HDFS, use name node DNS name.
 #path = "../input-data/timo-data/small-tweets-2016.txt"
 #path = "./one-day-stock-tweets.json"
-path = "../input-data/2016-02-08-11-57-tweets.txt"
-
+#path = "../input-data/2016-02-08-11-57-tweets.txt"
+path = "s3n://timo-twitter-data/2016-02-08-11-57_tweets.txt"
 tweets_rdd = spark_context.textFile(path)
 
 # Show debug information

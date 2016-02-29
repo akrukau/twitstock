@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="container" style="width:70%; height:700px; margin: 0 auto;">
+</div>
+<!-- fourth tab-->
+<div role="tabpanel" class="tab-pane" id="correlation">
+  <div class="row">
+    <div class="col-xs-6 col-md-4" style="top: 10px;">
+      <input type="text" id="stock_name_correlation" placeholder="Type Stock Ticker ..." style="margin-bottom: 20px;">
+      <button id="show_correlation_plot" type="submit" class="btn btn-primary">Submit</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div id="twitter_correlation_series" style="top:10px; height: 400px; width: 300"></div>
+  </div>     
+
+</div>
+
+{% endblock %}
+
+{% block highcharts %}
+        <script src="http://code.highcharts.com/stock/highstock.js"></script>
+        <script src="http://code.highcharts.com/stock/modules/exporting.js"></script>
+{% endblock %}
+{% block scripts %}
+<!-- stock symbol picker for 4th tab -->
+<script type="text/javascript",  id="correlation_time_series">
+$('#show_correlation_plot').click(function(){
+    var stock_name = $('#stock_name_correlation').val();
+    $.ajax({
+        type:"GET",
+        url:"/get_stock_plot/" + stock_name,
+          success:function(data) {
+          console.log(stock_price)
+          draw_correlation_series(stock_price)
+      },
+      fail: function() {
+        alert('Error drawing correlation');
+      }
+    });
+</script>
+
+<script type="text/javascript">
+//$(function () {
+    function draw_correlation_series(stock_price) 
+    {
+    Highcharts.setOptions({
+    	global: {
+           timezoneOffset: 5 * 60
+        }
+    });
+    $('#container').highcharts('StockChart', {
+        title: {
+            text: 'Number of friends available (Hourly)',
+            style: { "fontSize": "28px", "font-weight":"bold" },
+            margin: 20,
+            data : {{ [ [0, 1], [1, 2], [2, 3], [3, 5], [4, 6], [5, 8], [7, 10] ] }}
+        },
+        // title: {
+        //         text: 'Stock price'
+        //     },
+        //     xAxis: {
+        //         gapGridLineWidth: 0
+        //     },
+        //series : [{
+        //    name : 'stock',
+        //    data : {{ json_response }}
+        //}],
+        rangeSelector : {
+                buttons : [{
+                    type : 'minute',
+                    count : 1,
+                    text : '1m'
+                }, {
+                    type : 'hour',
+                    count : 1,
+                    text : '1h'
+                }, {
+                    type : 'day',
+                    count : 1,
+                    text : '1D'
+                }, {
+                    type : 'all',
+                    count : 1,
+                    text : 'All'
+                }],
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,18 @@
+# Python related files                                                                                        
+build/                                                                                                        
+eggs/                                                                                                         
+env/                                                                                                          
+*.pyc                                                                                                         
+*.pyo                                                                                                         
+# Scala                                                                                                       
+*.class                                                                                                       
+# Libraries                                                                                                   
+*.so                                                                                                          
+# Test data                                                                                                   
+*.txt                                                                                                         
+*.csv                                                                                                         
+*.json                                                                                                        
+*.bz2                                                                                                         
+*.bzip2                                                                                                       
+archive/ 
+reference/                 

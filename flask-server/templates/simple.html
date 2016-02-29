@@ -1,0 +1,65 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Twitstock</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="../static/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <link href="../static/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="../static/css/jumbotron-narrow.css" rel="stylesheet">
+
+  </head>
+    <body>
+    <!-- Scripts for jQuery -->
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.js"></script>                      
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>                  
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>   
+	<!-- highcharts-->
+	<script src="http://code.highcharts.com/stock/highstock.src.js"></script>
+    <script src="http://code.highcharts.com/stock/modules/exporting.js"></script>
+
+        <h3>Line Chart</h3>
+        <div id='line_chart'></div>
+<script type="text/javascript">
+$(function () {
+    $('#line_chart').highcharts({
+        title: {
+            text: 'Rainfall Pattern in States (2010'
+        },
+        xAxis: {
+            categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            title:{
+                text:'Months'
+            }
+        },
+        yAxis:{
+            title:{
+                text:'Rainfall in mm'
+            }
+        },
+        series: [{
+            data: [79.8,26,1.7,28.3,233,502,443,319,234.8,249.1,583.2,355.7],
+            name: 'Andaman and Nicobar'
+        },
+        {
+            data: [72.8,66,4.5,28.3,123,502,43,59,234.8,29.1,583.2,35.7],
+            name: 'Karnataka'
+        }]
+
+    });
+});
+</script>
+
+    </body>
+</html>

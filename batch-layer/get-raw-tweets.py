@@ -2,6 +2,7 @@ from pyspark import SparkContext
 from pyspark import SparkConf
 from pyspark import StorageLevel
 import datetime
+import string
 import json
 import time
 import sys
@@ -14,17 +15,9 @@ import re
 def get_cassandra_time(ts_string):
     """
     Converts from Twitter API time format to Cassandra format  
-    Timestamps are rounded towards the nearest 5 minute interval.
-    The reason is that available stock data is in 5 minute interval. 
     """
-    #  Rounding interval, in minutes
-    round_interval = 5
     raw_time = datetime.datetime.strptime(ts_string,'%a %b %d %H:%M:%S +0000 %Y')
-    final_time = raw_time - datetime.timedelta(minutes=raw_time.minute % round_interval, \
-        seconds=raw_time.second, microseconds=raw_time.microsecond)
-    #print "Timestamp", ts_string,"Raw time", datetime.datetime.strftime(raw_time, '%Y-%m-%d %H:%M:%S'), \
-    #    "actual time", datetime.datetime.strftime(final_time, '%Y-%m-%d %H:%M:%S') 
-    return datetime.datetime.strftime(final_time, '%Y-%m-%d %H:%M:%S')
+    return datetime.datetime.strftime(raw_time, '%Y-%m-%d %H:%M:%S')
 
 def init_tickers():
     """
@@ -53,16 +46,6 @@ def init_negative_words():
     return neg_words
     
 def get_sentiment(tweet_text, pos_words, neg_words):
-    """
-    The sentiment was calculated using the model from:
-    'Can Twitter Help Predict Firm Level 
-    Earnings and Stock Returns?'
-    Eli Bartov, Lucile Faurel, Partha Mohanram,
-    Rotman School of Business Working Paper, 2015
-
-    The word list is taken from:
-    http://www3.nd.edu/~mcdonald/Word_Lists.html
-    """
     # Convert to ascii and lower case
     cleaned_text = re.sub("[\.\,\:\(\)\!\?]", "", tweet_text, 0, 0)
     words = cleaned_text.split()
@@ -73,9 +56,9 @@ def get_sentiment(tweet_text, pos_words, neg_words):
     size = len(words)
     for i in xrange(size):
         word = words[i]
-        if word in pos_words.value:
+        if word in pos_words:
             pos_count += 1
-        if word in neg_words.value: 
+        if word in neg_words: 
             neg_count += 1
     if pos_count + neg_count == 0:
         # Return 0, if no relevant words are found
@@ -95,7 +78,7 @@ def parse_tweet(line, tickers, pos_words, neg_words):
             for match in matches:
                 ticker = match[1:]
                 #if True:
-                if ticker in tickers.value:
+                if ticker in tickers:
                     if "screen_name" in tweet["user"]:
                         author = tweet["user"]["screen_name"]
                     else:
@@ -108,9 +91,10 @@ def parse_tweet(line, tickers, pos_words, neg_words):
                     cassandra_time = get_cassandra_time(str(tweet["created_at"]))
                     # Convert to ASCII, and calculate sentiment
                     ascii_text = tweet["text"].encode('ascii','ignore').lower()
+                    ascii_text = ascii_text.replace("'", "''")
                     sentiment = get_sentiment(ascii_text, pos_words, neg_words)
                     records.append( ((ticker, cassandra_time), \
-                        (1, sentiment)) )
+                        (author, sentiment, ascii_text)) )
     
     except Exception as error:
         sys.stdout.write("Error trying to process the line: %s\n" % error)
@@ -129,24 +113,19 @@ def load_part_cassandra(part):
         session = cluster.connect('tweet_keyspace')
 
         for entry in part:
-            statement = "INSERT INTO tweets16 (ticker, time, n_tweets, sentiment)"+ \
-                "VALUES ('%s', '%s', %s, %s)" % (entry[0][0], entry[0][1], entry[1][0], entry[1][1])
-            #print "Statement", statement    
+            statement = "INSERT INTO tweets_raw (ticker, time, author, sentiment, tweet_text)"+ \
+                "VALUES ('%s', '%s', '%s', %s, '%s')" % (entry[0][0], entry[0][1], \
+                    entry[1][0], entry[1][1], entry[1][2])
             session.execute(statement)
         
         session.shutdown()
         cluster.shutdown()
 
+pos_words = init_positive_words()
+neg_words = init_negative_words()
 # Read and parse tweets
 configuration = SparkConf().setAppName("TweetsData")
 spark_context = SparkContext(conf = configuration)
-pos_words = init_positive_words()
-neg_words = init_negative_words()
-tickers = init_tickers()
-pos_words = spark_context.broadcast(pos_words)
-neg_words = spark_context.broadcast(neg_words)
-tickers = spark_context.broadcast(tickers)
-
 # For HDFS, use name node DNS name.
 #path = "../input-data/timo-data/small-tweets-2016.txt"
 #path = "./one-day-stock-tweets.json"
@@ -154,9 +133,7 @@ tickers = spark_context.broadcast(tickers)
 path = "s3n://timo-twitter-data/2016-02-08-11-57_tweets.txt"
 tweets_rdd = spark_context.textFile(path)
 
-# Show debug information
-# for entry in tweets_rdd.collect():
-#    print "Raw tweet is:",entry
+tickers = init_tickers()
 parsed_tweets = tweets_rdd.flatMap(lambda line: parse_tweet(line, tickers, pos_words, neg_words))
 
 # Print for debugging
@@ -164,6 +141,6 @@ parsed_tweets = tweets_rdd.flatMap(lambda line: parse_tweet(line, tickers, pos_w
 #    print "Parsed tweet", tweet
 
 # Load to Cassandra
-df_by_minute = parsed_tweets.reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))
-df_by_minute.foreachPartition(load_part_cassandra)
+#df_by_minute = parsed_tweets.reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))
+parsed_tweets.foreachPartition(load_part_cassandra)
 

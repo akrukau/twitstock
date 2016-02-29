@@ -5,8 +5,8 @@ from pyspark import StorageLevel
 import datetime
 import pytz
 
-# Write to Cassandra
 def load_part_cassandra(part):
+    """ Write data to Cassandra database """
     if part:
         from cassandra.cluster import Cluster
         # Original cluster
@@ -18,13 +18,13 @@ def load_part_cassandra(part):
         for quote in part:
             statement = "INSERT INTO stocks16 (ticker, time, price, volume)"+ \
                 "VALUES ('%s', '%s', %s, %s)" % quote
-            print "Statement", statement    
             session.execute(statement)
         
         session.shutdown()
         cluster.shutdown()
 
 def get_timestamp(date_string, time_string):
+    """ Merge time and date into timestamp and adjust timezone """
     raw_time = datetime.datetime.strptime(date_string + " " + time_string, "%Y-%m-%d %H:%M:%S")
     # Use Polish timezone as the data is from Polish website
     localtimezone = pytz.timezone('Europe/Warsaw')
@@ -45,7 +45,7 @@ configuration = SparkConf().setAppName("StocksData")
 spark_context = SparkContext(conf=configuration)
 
 # Full data
-path = "./sample-stocks-2016.csv"
+path = "./all-stocks-2016.csv"
 df = spark_context.textFile(path)
 parsed_stocks = df.map(parse_stocks)
 
